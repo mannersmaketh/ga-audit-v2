@@ -46,7 +46,7 @@ except KeyError:
     """)
     st.stop()
 
-redirect_uri = "https://ga-audit-v2.streamlit.app"
+redirect_uri = "https://ga-audit.streamlit.app"
 authorize_url = "https://accounts.google.com/o/oauth2/v2/auth"
 token_url = "https://oauth2.googleapis.com/token"
 scope = "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics.manage.users.readonly https://www.googleapis.com/auth/analytics.edit"
