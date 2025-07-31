@@ -51,23 +51,61 @@ The audit analyzes data from the last 90 days and requires access to:
 - Google Analytics 4 property data
 - Google Sheets for export functionality (optional)
 
-## 🛠️ Installation
+## 🛠️ Installation & Setup
 
-1. Clone this repository
-2. Install dependencies:
+### Step 1: Clone and Install
+```bash
+git clone https://github.com/mannersmaketh/ga-audit-v2.git
+cd ga-audit-v2
+pip install -r requirements.txt
+```
+
+### Step 2: Google Cloud Console Setup
+1. **Create a Google Cloud Project**:
+   - Go to https://console.cloud.google.com/
+   - Create a new project or select an existing one
+
+2. **Enable Required APIs**:
+   - Go to "APIs & Services" > "Library"
+   - Search for and enable:
+     - **Google Analytics Data API**
+     - **Google Sheets API**
+
+3. **Create OAuth 2.0 Credentials**:
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth 2.0 Client IDs"
+   - Set application type to "Web application"
+   - Add authorized redirect URIs:
+     - For local development: `http://localhost:8501`
+     - For Streamlit Cloud: `https://ga-audit-v2.streamlit.app`
+   - Copy the **Client ID** and **Client Secret**
+
+### Step 3: Configure Secrets
+
+#### For Local Development:
+1. Copy the template secrets file:
    ```bash
-   pip install -r requirements.txt
+   cp .streamlit/secrets.toml.example .streamlit/secrets.toml
    ```
-3. Set up your Streamlit secrets with your Google OAuth credentials:
+2. Edit `.streamlit/secrets.toml` and replace the placeholder values with your actual OAuth credentials:
+   ```toml
+   client_id = "your-actual-client-id"
+   client_secret = "your-actual-client-secret"
+   ```
+
+#### For Streamlit Cloud:
+1. Go to your Streamlit Cloud app settings
+2. Add the following to your secrets:
    ```toml
    [secrets]
-   client_id = "your-oauth-client-id"
-   client_secret = "your-oauth-client-secret"
+   client_id = "your-actual-client-id"
+   client_secret = "your-actual-client-secret"
    ```
-4. Run the app:
-   ```bash
-   streamlit run app.py
-   ```
+
+### Step 4: Run the App
+```bash
+streamlit run app.py
+```
 
 ## 📈 Key Insights
 
@@ -121,3 +159,20 @@ The app provides automated insights including:
    - Creates a new worksheet called "GA4 Audit V2"
    - Includes timestamp and organized sections
    - Automatically formats headers and data
+
+## 🆘 Troubleshooting
+
+### "OAuth Credentials Not Configured" Error
+- Ensure you've set up the secrets correctly (see Step 3 above)
+- Check that your OAuth credentials are valid
+- Verify the redirect URI matches your deployment URL
+
+### "Spreadsheet not found" Error
+- Ensure the Google Sheets URL is correct
+- Check that you have edit access to the spreadsheet
+- Verify Google Sheets authentication is complete
+
+### "GA4 API error" Messages
+- Check that your GA4 property has data in the last 90 days
+- Verify you have the correct permissions for the GA4 property
+- Ensure the Google Analytics Data API is enabled in your Google Cloud project

@@ -11,9 +11,42 @@ import os
 import re
 
 # --------------- CONFIG ---------------
-client_id = st.secrets["client_id"]
-client_secret = st.secrets["client_secret"]
-redirect_uri = "https://ga-audit.streamlit.app"
+# Check if secrets are configured
+try:
+    client_id = st.secrets["client_id"]
+    client_secret = st.secrets["client_secret"]
+except KeyError:
+    st.error("""
+    ## 🔧 OAuth Credentials Not Configured
+    
+    This app requires Google OAuth credentials to access Google Analytics and Google Sheets.
+    
+    ### To set up your credentials:
+    
+    1. **Create a Google Cloud Project** at https://console.cloud.google.com/
+    2. **Enable the APIs**:
+       - Google Analytics Data API
+       - Google Sheets API
+    3. **Create OAuth 2.0 credentials**:
+       - Go to "APIs & Services" > "Credentials"
+       - Click "Create Credentials" > "OAuth 2.0 Client IDs"
+       - Set application type to "Web application"
+       - Add authorized redirect URI: `https://ga-audit-v2.streamlit.app`
+    4. **Configure Streamlit secrets**:
+       - In your Streamlit Cloud app settings
+       - Add the following to your secrets:
+       ```toml
+       [secrets]
+       client_id = "your-oauth-client-id"
+       client_secret = "your-oauth-client-secret"
+       ```
+    
+    ### For local development:
+    Create a `.streamlit/secrets.toml` file with the above configuration.
+    """)
+    st.stop()
+
+redirect_uri = "https://ga-audit-v2.streamlit.app"
 authorize_url = "https://accounts.google.com/o/oauth2/v2/auth"
 token_url = "https://oauth2.googleapis.com/token"
 scope = "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics.manage.users.readonly https://www.googleapis.com/auth/analytics.edit"
