@@ -46,7 +46,7 @@ except KeyError:
     """)
     st.stop()
 
-redirect_uri = "https://ga-audit.streamlit.app"
+redirect_uri = "https://ga-audit-v2-8ggow5j56ek8ry7q5prvfi.streamlit.app"
 authorize_url = "https://accounts.google.com/o/oauth2/v2/auth"
 token_url = "https://oauth2.googleapis.com/token"
 scope = "https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/analytics.manage.users.readonly https://www.googleapis.com/auth/analytics.edit"
@@ -59,6 +59,23 @@ SCOPES = [
 
 st.set_page_config(page_title="GA4 Audit V2", layout="wide")
 st.title("📊 GA4 Audit V2 - Executive Report")
+
+# --------------- SPREADSHEET URL INPUT ---------------
+st.markdown("### 📊 Google Sheets Export Setup")
+st.markdown("Enter your Google Sheets URL below to automatically export audit results:")
+
+sheet_url = st.text_input(
+    "Google Sheets URL",
+    placeholder="https://docs.google.com/spreadsheets/d/...",
+    help="Paste the URL of the Google Sheet where you want the results to be exported. A new sheet will be created for each audit."
+)
+
+if sheet_url:
+    st.success("✅ Google Sheets URL configured")
+else:
+    st.info("ℹ️ You can still run the audit and download CSV results without configuring Google Sheets")
+
+st.markdown("---")
 
 # --------------- GOOGLE SHEETS AUTH ---------------
 def get_google_sheets_auth():
@@ -128,13 +145,13 @@ def push_to_google_sheet(sheet_url, audit_data, funnel_data, unassigned_mediums,
         sheet_id = extract_sheet_id_from_url(sheet_url)
         if not sheet_id:
             st.error("❌ Invalid Google Sheets URL. Please provide a valid Google Sheets URL.")
-            return False
+            return False, None
         
         # Get authenticated client
         creds = get_google_sheets_auth()
         if not creds:
             st.error("❌ Google Sheets authentication required. Please authenticate first.")
-            return False
+            return False, None
         
         client = gspread.authorize(creds)
         
@@ -143,26 +160,29 @@ def push_to_google_sheet(sheet_url, audit_data, funnel_data, unassigned_mediums,
             spreadsheet = client.open_by_key(sheet_id)
         except gspread.SpreadsheetNotFound:
             st.error("❌ Spreadsheet not found. Please check the URL and ensure you have edit access.")
-            return False
+            return False, None
         except gspread.APIError as e:
             st.error(f"❌ Google Sheets API error: {e}")
-            return False
+            return False, None
         
-        # Create or get the audit worksheet
+        # Create a new worksheet with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        sheet_name = f"GA4 Audit V2 - {timestamp}"
+        
         try:
-            worksheet = spreadsheet.worksheet("GA4 Audit V2")
+            worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=100, cols=10)
         except gspread.WorksheetNotFound:
-            worksheet = spreadsheet.add_worksheet(title="GA4 Audit V2", rows=100, cols=10)
-        
-        # Clear existing data
-        worksheet.clear()
+            # Fallback if add_worksheet fails
+            worksheet = spreadsheet.worksheet("Sheet1")
+            worksheet.clear()
+            worksheet.update('A1', f'GA4 Audit V2 - {timestamp}')
         
         # Prepare data for Google Sheets
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Header
-        worksheet.update('A1', 'GA4 Audit V2 Results')
-        worksheet.update('A2', f'Generated: {timestamp}')
+        worksheet.update('A1', f'GA4 Audit V2 Results - {sheet_name}')
+        worksheet.update('A2', f'Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         worksheet.update('A3', '')
         
         # Section 1: Sessions and Users
@@ -264,11 +284,11 @@ def push_to_google_sheet(sheet_url, audit_data, funnel_data, unassigned_mediums,
         worksheet.format('A12:A12', {'textFormat': {'bold': True, 'fontSize': 12}})
         worksheet.format('A16:A16', {'textFormat': {'bold': True, 'fontSize': 12}})
         
-        return True
+        return True, sheet_name
         
     except Exception as e:
         st.error(f"❌ Error pushing to Google Sheets: {str(e)}")
-        return False
+        return False, None
 
 # --------------- OAUTH FLOW ---------------
 if "access_token" not in st.session_state:
@@ -305,8 +325,6 @@ if "access_token" not in st.session_state:
         st.session_state["access_token"] = token["access_token"]
 
 # --------------- GOOGLE SHEETS SETUP ---------------
-st.sidebar.markdown("## 📊 Google Sheets Integration")
-
 # Handle Google Sheets OAuth callback
 if "sheets_code" in st.query_params and "sheets_oauth_state" in st.session_state:
     sheets_code = st.query_params["sheets_code"]
@@ -332,18 +350,11 @@ if "sheets_code" in st.query_params and "sheets_oauth_state" in st.session_state
 # Google Sheets authentication
 sheets_creds = get_google_sheets_auth()
 if not sheets_creds:
-    st.sidebar.warning("⚠️ Google Sheets authentication required for sheet export")
-    if st.sidebar.button("🔐 Authenticate Google Sheets"):
+    st.warning("⚠️ Google Sheets authentication required for sheet export")
+    if st.button("🔐 Authenticate Google Sheets"):
         authenticate_google_sheets()
 else:
-    st.sidebar.success("✅ Google Sheets authenticated")
-
-# Google Sheets URL input
-sheet_url = st.sidebar.text_input(
-    "Google Sheets URL",
-    placeholder="https://docs.google.com/spreadsheets/d/...",
-    help="Paste the URL of the Google Sheet where you want the results to be exported"
-)
+    st.success("✅ Google Sheets authenticated")
 
 # --------------- RETRIEVE PROPERTIES ---------------
 headers = {"Authorization": f"Bearer {st.session_state['access_token']}"}
@@ -596,7 +607,7 @@ if selected_label:
         if sheet_url and sheet_url.strip():
             if st.button("📊 Push to Google Sheets", type="secondary"):
                 with st.spinner("Pushing data to Google Sheets..."):
-                    success = push_to_google_sheet(
+                    success, sheet_name = push_to_google_sheet(
                         sheet_url, 
                         audit_data, 
                         funnel_data, 
@@ -604,7 +615,7 @@ if selected_label:
                         duplicate_transaction_ids
                     )
                     if success:
-                        st.success("✅ Data successfully pushed to Google Sheets!")
+                        st.success(f"✅ Data successfully pushed to Google Sheets! New sheet: '{sheet_name}'")
                     else:
                         st.error("❌ Failed to push data to Google Sheets. Please check the URL and permissions.")
         

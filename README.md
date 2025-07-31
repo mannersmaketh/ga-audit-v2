@@ -77,7 +77,7 @@ pip install -r requirements.txt
    - Set application type to "Web application"
    - Add authorized redirect URIs:
      - For local development: `http://localhost:8501`
-     - For Streamlit Cloud: `https://ga-audit-v2.streamlit.app`
+     - For Streamlit Cloud: `https://ga-audit-v2-8ggow5j56ek8ry7q5prvfi.streamlit.app`
    - Copy the **Client ID** and **Client Secret**
 
 ### Step 3: Configure Secrets
